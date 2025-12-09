@@ -37,11 +37,11 @@ def run_python_file(working_directory, file_path, args=[]):
         return f'Error: "{file_path}" is not a Python file.'
     
 
-    if not os.path.isfile(file_path):
+    if not os.path.isfile(full_path):
         return f'Error: File "{file_path}" not found'
 
     try:
-        command_lst = ["uv", "run", file_path] + args
+        command_lst = ["uv", "run", full_path] + args
         completed_process = subprocess.run(command_lst, timeout=30, capture_output=True, text=True)
         stdout = completed_process.stdout
         stderr = completed_process.stderr
@@ -50,7 +50,7 @@ def run_python_file(working_directory, file_path, args=[]):
         if code != 0:
             return_string = return_string + f" Process exited with code {code}"
 
-        if not stdout:
+        if not stdout and not stderr:
             return "Error: No output produced"
 
         return return_string

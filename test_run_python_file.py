@@ -10,7 +10,7 @@ print("Test: main.py with args")
 print(run_python_file("calculator", "main.py", ["3 + 5"]))
 print(separator)
 
-print("Test: calculator tests")
+print("Test: calculator tests.py")
 print(run_python_file("calculator", "tests.py"))
 print(separator)
 
