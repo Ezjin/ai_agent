@@ -30,34 +30,56 @@ def main():
 
     messages = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash-lite",
-        contents=messages,
-        config=types.GenerateContentConfig(tools=[available_functions], system_instruction=system_prompt),
-    )
-
-    if not response.usage_metadata:
-        raise RuntimeError("API response empty")
-
-    if args.verbose:
-        print(f"User prompt: {args.user_prompt}")
-        print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
-        print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
-        print("Response:")
+    i = 0
     
-    if response.function_calls:
-        response_list = []
-        for item in response.function_calls:
-            function_results = call_function(item)
-            if not function_results.parts[0].function_response.response:
-                raise FatalException("Error: call_functions not returning a response")
-            response_list.append(function_results.parts[0])
+    while i < 20:
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=messages,
+                config=types.GenerateContentConfig(tools=[available_functions], system_instruction=system_prompt),
+            )
 
-            if args.verbose:
-                print(f"-> {function_results.parts[0].function_response.response}")
+            if not response.usage_metadata:
+                raise RuntimeError("API response empty")
 
-    else:
-        print(response.text)
+            response_messages = []
+
+            for candidate in response.candidates:
+                response_messages.append(candidate.content)
+
+            messages.extend(response_messages) 
+
+            if response.function_calls:
+                response_list = []
+                for item in response.function_calls:
+                    function_results = call_function(item)
+                    if not function_results.parts[0].function_response.response:
+                        raise FatalException("Error: call_functions not returning a response")
+                    response_list.append(function_results.parts[0])
+
+                    if args.verbose:
+                        print(f"-> {function_results.parts[0].function_response.response}")
+
+                messages.extend(response_list)
+
+            else:
+                text_part = [part.text for part in response.candidates[0].content.parts if part.text]
+                
+                if text_part:
+                    if args.verbose:
+                        print(f"User prompt: {args.user_prompt}")
+                        print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
+                        print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+                        print("Response:")
+
+                    print(response.text)
+                    break
+
+            i += 1
+
+        except Exception as e:
+            raise Exception(f"Error: Can't get a response - {e}")
 
 if __name__ == "__main__":
     main()
